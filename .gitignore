@@ -1,0 +1,8 @@
+*.sh
+*.xcf
+TownManager.*
+!TownManager.xml
+!TownManager.rsf
+build/
+ideas/
+tm.conf
