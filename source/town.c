@@ -141,6 +141,7 @@ void load_tm_config(char** current){
 	int eol = 0;
 	char* buf2;
 
+	FSUSER_CreateDirectory(sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager"), 0);
 	ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/tm.conf"), FS_OPEN_READ | FS_OPEN_CREATE, 0);
 	if(ret){
 		gfx_error(ret, __FILENAME__, __LINE__);

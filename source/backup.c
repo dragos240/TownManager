@@ -160,9 +160,11 @@ void backup_to_prev_folder(char* dirname){
 	int error;
 	int i;
 
+	FSUSER_CreateDirectory(sdmc_arch, fsMakePath(PATH_ASCII, savespath), 0);
 	//Erase sdmc data
 	sdmcpath = calloc(strlen(savespath)+strlen(dirname)+1+1, 1);
 	sprintf(sdmcpath, "%s%s/", savespath, dirname);
+	FSUSER_CreateDirectory(sdmc_arch, fsMakePath(PATH_ASCII, sdmcpath), 0);
 	files = get_files(sdmc_arch, sdmcpath);
 	if(files.numfiles != 0){
 		gfx_displaymessage("Erasing old files from the SD card...");

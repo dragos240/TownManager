@@ -34,25 +34,25 @@ int main(){
 	gfx_init();
 	launcher_init();
 	ret = fs_init();
-	if(ret)
+	if(ret){
 		gfx_error(ret, __FILENAME__, __LINE__);
+		goto main_cleanup;
+	}
 
 	load_tm_config(&current_town);
-	if(strcmp(current_town, "") != 0)
+	if(strcmp(current_town, "") != 0){
 		backup_to_prev_folder(current_town);
+	}
 
 	while(aptMainLoop() && menuindex != -1){
 		populate_menu_entries(&menu_entries, &menucount);
-		if(ret){
-			gfx_error(ret, __FILENAME__, __LINE__);
-			return 1;
-		}
 
 		if(menucount == 1){
 			init_save_folder();
 		}
-		else
+		else{
 			display_menu(menu_entries, menucount, &menuindex, headerstr);
+		}
 
 		if(menuindex != menucount-1 && menuindex != -1){
 			town_opts(menu_entries[menuindex]);
@@ -61,7 +61,7 @@ int main(){
 			create_town();
 		}
 	}
-
+main_cleanup:
 	fs_fini();
 	launcher_fini();
 	gfx_fini();

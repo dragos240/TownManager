@@ -35,7 +35,11 @@ Result fs_init(){
 		return ret;
 
 	amInit();
-	titleid = GAMEID;
+	AM_GetTitleList(NULL, MEDIATYPE_GAME_CARD, 1, &titleid);
+	if(titleid != NA_GAMEID && titleid != EU_GAMEID && titleid != JP_GAMEID){
+		gfx_waitmessage("Unknown titleID 0x%llX", titleid);
+		return -1;
+	}
 	lowerid = (u32)(titleid);
 	upperid = (u32)(titleid >> 32);
 	if(is3dsx){

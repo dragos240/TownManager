@@ -3,7 +3,9 @@
 
 #include <3ds.h>
 
-#define GAMEID 0x0004000000086300
+#define NA_GAMEID 0x0004000000086300
+#define EU_GAMEID 0x0004000000086400
+#define JP_GAMEID 0x0004000e00086200
 #define SECOND_IN_NS (1000*1000*1000)
 #define SIZE_GARDEN 522752
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)

@@ -165,10 +165,10 @@ cia:
 	rm -f banner.bnr icon.icn
 
 zip:
-	rm -rf TownManager-latest
-	mkdir TownManager-latest
-	cp $(TARGET).3dsx $(OUTPUT).smdh TownManager-latest
-	zip -r TownManager-latest.zip TownManager-latest/
+	rm -rf TownManager-latest.zip
+	mkdir TownManager
+	cp $(TARGET).3dsx $(TARGET).cia $(OUTPUT).smdh TownManager.xml TownManager
+	zip -r TownManager-latest.zip TownManager
 
 #---------------------------------------------------------------------------------
 else
