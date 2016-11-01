@@ -32,8 +32,18 @@ int main(){
 	char** menu_entries = NULL;
 
 	gfx_init();
+	if(is3dsx){
+		ret = fs_init();
+		if(ret){
+			gfx_error(ret, __FILENAME__, __LINE__);
+			goto main_cleanup;
+		}
+	}
+	get_mediatype();
+	if(get_titleid() == -1)
+		goto main_cleanup;
 	launcher_init();
-	ret = fs_init();
+	ret = open_archives();
 	if(ret){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		goto main_cleanup;
@@ -62,7 +72,10 @@ int main(){
 		}
 	}
 main_cleanup:
-	fs_fini();
+	close_archives();
+	if(is3dsx){
+		fs_fini();
+	}
 	launcher_fini();
 	gfx_fini();
 

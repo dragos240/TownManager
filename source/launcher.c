@@ -103,7 +103,7 @@ void launch_game(){
 	Result ret;
 
 	if(is3dsx){
-		ret = NSS_Reboot(0x0, 0x0, MEDIATYPE_GAME_CARD, 0x1);
+		ret = NSS_Reboot(lowerid, upperid, mediatype, 0x1);
 		if(ret){
 			gfx_error(ret, __FILE__, __LINE__);
 		}
@@ -114,7 +114,7 @@ void launch_game(){
 		memset(param, 0, sizeof(param));
 		memset(hmac, 0, sizeof(hmac));
 
-		APT_PrepareToDoApplicationJump(0, 0x0004000000086300LL, 2);
+		APT_PrepareToDoApplicationJump(0, titleid, mediatype);
 		APT_DoApplicationJump(param, sizeof(param), hmac);
 	}
 }
