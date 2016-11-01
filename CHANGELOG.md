@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.2.0]
+## [0.2.0] - 2016-10-31
 ### Added
 - Support for eShop/CIA copies of the game
 
