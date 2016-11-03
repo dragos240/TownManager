@@ -1,8 +1,10 @@
 # Change Log
 
-## [0.2.1] - 2016-11-03
+## [1.0.0] - 2016-11-03
 ### Changed
 - Fixed TownManager for Amiibo update.
+### Notes
+- I feel that TownManager is stable enough that it deserves a v1.0.0 version label. It's been tested and I don't have any other major features to add to it.
 
 ## [0.2.0] - 2016-10-31
 ### Added
