@@ -152,7 +152,7 @@ $(BUILD):
 #---------------------------------------------------------------------------------
 clean:
 	echo clean ...
-	rm -rf $(BUILD) $(TARGET).3dsx $(OUTPUT).smdh $(TARGET).elf $(TARGET).cia
+	rm -rf $(BUILD) $(TARGET).3dsx $(OUTPUT).smdh $(TARGET).elf $(TARGET).cia $(TARGET)/ *.zip
 
 citra:
 	citra-qt $(TARGET).3dsx

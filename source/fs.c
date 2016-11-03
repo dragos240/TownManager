@@ -180,6 +180,10 @@ int get_titleid(){
 				gfx_displaymessage("Found!");
 			}
 		}
+		if(titleid == 1337LL){
+			gfx_waitmessage("Error! Could not find a copy of AC:NL on this device!");
+			return -1;
+		}
 	}
 	amExit();
 	if(titleid != NA_GAMEID && titleid != EU_GAMEID && titleid != JP_GAMEID){

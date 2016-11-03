@@ -91,7 +91,7 @@ char* file_to_buffer(FS_Archive arch, char* dirpath, char* filename){
 	char* buffer = NULL;
 	Result ret;
 	Handle file_handle;
-	
+
 	file_in = calloc(strlen(dirpath)+strlen(filename)+1, 1);
 	sprintf(file_in, "%s%s", dirpath, filename);
 
@@ -141,8 +141,9 @@ char* file_to_buffer(FS_Archive arch, char* dirpath, char* filename){
 		error = 1;
 	}
 	if(error == 1){
+		gfx_waitmessage("Uh oh! Errors occurred while running file_to_buffer!");
 		free(buffer);
-		return "";
+		return NULL;
 	}
 	else
 		return buffer;
@@ -157,7 +158,7 @@ void backup_to_prev_folder(char* dirname){
 	char* sdmcpath;
 	char* filepath;
 	char* buf;
-	int error;
+	int error = 0;
 	int i;
 
 	FSUSER_CreateDirectory(sdmc_arch, fsMakePath(PATH_ASCII, savespath), 0);
@@ -178,11 +179,6 @@ void backup_to_prev_folder(char* dirname){
 			}
 			free(filepath);
 		}
-		ret = FSUSER_ControlArchive(game_arch, ARCHIVE_ACTION_COMMIT_SAVE_DATA, NULL, 0, NULL, 0);
-		if(ret){
-			gfx_error(ret, __FILENAME__, __LINE__);
-			return;
-		}
 	}
 	free(sdmcpath);
 	//backup saves
@@ -192,15 +188,21 @@ void backup_to_prev_folder(char* dirname){
 	for(i = 0; i < files.numfiles; i++){
 		gfx_displaymessage("Backing up %s to %s...", files.files[i], dirname);
 		buf = file_to_buffer(game_arch, gamepath, files.files[i]);
-		if(strcmp(buf, "") == 0)
+		if(!buf){
+			gfx_waitmessage("Error: buffer empty!");
 			break;
+		}
 		filepath = calloc(strlen(gamepath)+strlen(files.files[i])+1, 1);
 		sprintf(filepath, "%s%s", gamepath, files.files[i]);
 		size = filesize_to_u64(game_arch, filepath);
 		error = buffer_to_file(sdmc_arch, buf, size, sdmcpath, files.files[i]);
-		if(error == -1)
-			break;
+		if(error == -1){
+			gfx_waitmessage("buffer_to_file failed!");
+		}
 		free(filepath);
+		free(buf);
+		if(error < 0)
+			break;
 	}
 	free(sdmcpath);
 	gfx_waitmessage("Done backing up game to %s", dirname);

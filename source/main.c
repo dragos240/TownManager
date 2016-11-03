@@ -57,12 +57,7 @@ int main(){
 	while(aptMainLoop() && menuindex != -1){
 		populate_menu_entries(&menu_entries, &menucount);
 
-		if(menucount == 1){
-			init_save_folder();
-		}
-		else{
-			display_menu(menu_entries, menucount, &menuindex, headerstr);
-		}
+		display_menu(menu_entries, menucount, &menuindex, headerstr);
 
 		if(menuindex != menucount-1 && menuindex != -1){
 			town_opts(menu_entries[menuindex]);

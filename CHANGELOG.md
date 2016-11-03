@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.2.1] - 2016-11-03
+### Changed
+- Fixed TownManager for Amiibo update.
+
 ## [0.2.0] - 2016-10-31
 ### Added
 - Support for eShop/CIA copies of the game

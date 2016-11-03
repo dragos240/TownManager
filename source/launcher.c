@@ -43,7 +43,7 @@ int prepare_to_launch(char* dirname){
 	//copy local files to cartridge
 	for(i = 0; i < files.numfiles; i++){
 		buf = file_to_buffer(sdmc_arch, dirpath, files.files[i]);
-		if(strcmp(buf, "") == 0){
+		if(buf == NULL){
 			gfx_waitmessage("Buffer is empty!");
 			return -1;
 		}

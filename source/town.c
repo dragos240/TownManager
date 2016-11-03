@@ -252,6 +252,7 @@ void delete_town(char* dirname){
 		error = 1;
 		goto delete_town_cleanup;
 	}
+	FSFILE_Close(handle);
 	//if same, delete tm.conf
 	if(strcmp(dirname, "Main") == 0){
 		gfx_waitmessage("'Main' cannot be deleted as it is the default save file.");
@@ -274,6 +275,7 @@ void delete_town(char* dirname){
 	gfx_displaymessage("Deleting town...");
 	ret = FSUSER_DeleteDirectoryRecursively(sdmc_arch, fsMakePath(PATH_ASCII, dirpath));
 	if(ret){
+		gfx_waitmessage("dirpath: %s", dirpath);
 		gfx_error(ret, __FILENAME__, __LINE__);
 		error = 1;
 		goto delete_town_cleanup;
