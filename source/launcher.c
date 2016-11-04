@@ -33,7 +33,10 @@ int prepare_to_launch(char* dirname){
 	u64 size;
 	file_t files;
 	int i;
-	int ret;
+	int error;
+	u64 securein;
+	u8 secureout;
+	Result ret;
 
 	gfx_displaymessage("Preparing to launch game...");
 	dirpath = calloc(strlen(savespath)+strlen(dirname)+1+1, 1);
@@ -50,31 +53,37 @@ int prepare_to_launch(char* dirname){
 		filepath = calloc(strlen(dirpath)+strlen(files.files[i])+1, 1);
 		sprintf(filepath, "%s%s", dirpath, files.files[i]);
 		size = filesize_to_u64(sdmc_arch, filepath);
-		ret = buffer_to_file(game_arch, buf, size, "/", files.files[i]);
-		if(ret == -1){
+		error = buffer_to_file(game_arch, buf, size, "/", files.files[i]);
+		if(error == -1){
 			gfx_waitmessage("buffer_to_file failed!");
 			return -1;
 		}
 	}
+	if(is3dsx)
+		fs_fini();
+	securein = ((u64)SECUREVALUE_SLOT_SD << 32) | (uniqueid << 8);
+	ret = FSUSER_ControlSecureSave(SECURESAVE_ACTION_DELETE, &securein, 8, &secureout, 1);
+	if(ret){
+		gfx_error(ret, __FILENAME__, __LINE__);
+		return -1;
+	}
+	if(is3dsx)
+		fs_init();
 	free(dirpath);
 	//Write dirname as the sole contents of the /TownManager/tm.conf file
-	ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/tm.conf"), FS_OPEN_WRITE, 0);
-	if(ret){
+	if((ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/tm.conf"), FS_OPEN_WRITE, 0))){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		return -1;
 	}
-	ret = FSFILE_Write(handle, &written, 0, dirname, strlen(dirname)+1, FS_WRITE_FLUSH | FS_WRITE_UPDATE_TIME);
-	if(ret){
+	if((ret = FSFILE_Write(handle, &written, 0, dirname, strlen(dirname)+1, FS_WRITE_FLUSH | FS_WRITE_UPDATE_TIME))){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		return -1;
 	}
-	ret = FSFILE_SetSize(handle, (u64)(strlen(dirname)+1));
-	if(ret){
+	if((ret = FSFILE_SetSize(handle, (u64)(strlen(dirname)+1)))){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		return -1;
 	}
-	ret = FSFILE_Close(handle);
-	if(ret){
+	if((ret = FSFILE_Close(handle))){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		return -1;
 	}
@@ -103,8 +112,7 @@ void launch_game(){
 	Result ret;
 
 	if(is3dsx){
-		ret = NSS_Reboot(lowerid, upperid, mediatype, 0x1);
-		if(ret){
+		if((ret = NSS_Reboot(lowerid, upperid, mediatype, 0x1))){
 			gfx_error(ret, __FILE__, __LINE__);
 		}
 	}

@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.1] - 2016-11-04
+### Changed
+- Fixed TownManager for eShop/CIA support (secure values were not deleted until now)
+
 ## [1.0.0] - 2016-11-03
 ### Changed
 - Fixed TownManager for Amiibo update.

@@ -2,9 +2,10 @@
 #define TM_FS_H
 
 extern FS_MediaType mediatype;
+extern u64 titleid;
 extern u32 lowerid;
 extern u32 upperid;
-extern u64 titleid;
+extern u32 uniqueid;
 
 typedef struct{
 	int numdirs;

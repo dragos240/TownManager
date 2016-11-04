@@ -10,7 +10,7 @@
 
 FS_MediaType mediatype;
 u64 titleid;
-u32 lowerid, upperid;
+u32 lowerid, upperid, uniqueid;
 
 FS_Archive game_arch, sdmc_arch;
 
@@ -192,6 +192,7 @@ int get_titleid(){
 	}
 	lowerid = (u32)(titleid);
 	upperid = (u32)(titleid >> 32);
+	uniqueid = (lowerid >> 8);
 	
 	return 0;
 }
