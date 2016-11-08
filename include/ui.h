@@ -9,6 +9,6 @@ extern sf2d_texture* tm;
 void ui_init();
 void ui_fini();
 
-void ui_frame();
+void ui_frame(char* titletext, ...);
 
 #endif

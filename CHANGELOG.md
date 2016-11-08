@@ -1,5 +1,13 @@
 # Change Log
 
+## [1.1.0] - 2016-11-08
+### Added
+- Ability to clone towns
+- Ability to rename towns
+
+### Changed
+- TownManager now deletes files from the game archive before loading new files back on.
+
 ## [1.0.1] - 2016-11-04
 ### Changed
 - Fixed TownManager for eShop/CIA support (secure values were not deleted until now)

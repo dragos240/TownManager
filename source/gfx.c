@@ -44,25 +44,6 @@ void gfx_fini(){
 	sf2d_fini();
 }
 
-void gfx_waitbutton(){
-	while(aptMainLoop()){
-		hidScanInput();
-
-		if(hidKeysDown() & KEY_A)
-			break;
-
-		sf2d_start_frame(GFX_TOP, GFX_LEFT);
-			ui_frame();
-			sftd_draw_textf(font, 0, fontheight*2, COLOR_WHITE, fontheight, "Press the A button to continue.\n");
-		sf2d_end_frame();
-		if(is3dsx){
-			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
-			sf2d_end_frame();
-		}
-		sf2d_swapbuffers();
-	}
-}
-
 int gfx_prompt(char* message, char* keymsg){
 	if(keymsg==NULL)keymsg = "A = Yes, B = No.";
 
@@ -75,9 +56,8 @@ int gfx_prompt(char* message, char* keymsg){
 			return 1;
 	
 		sf2d_start_frame(GFX_TOP, GFX_LEFT);
-			ui_frame();
+			ui_frame(keymsg);
 			sftd_draw_textf(font, 0, fontheight*2, RGBA8(0xFF, 0xFF, 0xFF, 0xFF), fontheight, "%s", message);
-			sftd_draw_textf(font, 0, fontheight*4, RGBA8(0xFF, 0xFF, 0xFF, 0xFF), fontheight, "%s", keymsg);
 		sf2d_end_frame();
 		if(is3dsx){
 			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
@@ -101,9 +81,8 @@ int gfx_prompt3(char* message, char* keymsg){
 			return 2;
 	
 		sf2d_start_frame(GFX_TOP, GFX_LEFT);
-			ui_frame();
+			ui_frame(keymsg);
 			sftd_draw_textf(font, 0, fontheight*2, RGBA8(0xFF, 0xFF, 0xFF, 0xFF), fontheight, "%s", message);
-			sftd_draw_textf(font, 0, fontheight*4, RGBA8(0xFF, 0xFF, 0xFF, 0xFF), fontheight, "%s", keymsg);
 		sf2d_end_frame();
 		if(is3dsx){
 			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
@@ -123,8 +102,8 @@ void gfx_error(Result ret, char* file, int line){
 			break;
 
 		sf2d_start_frame(GFX_TOP, GFX_LEFT);
-			ui_frame();
-			sftd_draw_textf(font, 0, fontheight*2, COLOR_WHITE, fontheight, "Error: 0x%X, %s:%d\n\nPress the A key to continue.", ret, file, line);
+			ui_frame("Press the A key to continue.");
+			sftd_draw_textf(font, 0, fontheight*2, COLOR_WHITE, fontheight, "Error: 0x%X, %s:%d", ret, file, line);
 		sf2d_end_frame();
 		if(is3dsx){
 			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
@@ -139,7 +118,7 @@ void gfx_displaymessage(char* msg, ...){
 	va_start(args, msg);
 	vsnprintf(buffer, 256, msg, args);
 	sf2d_start_frame(GFX_TOP, GFX_LEFT);
-		ui_frame();
+		ui_frame("");
 		sftd_draw_text_wrap(font, 0, fontheight*2, COLOR_WHITE, fontheight, 280, buffer);
 	sf2d_end_frame();
 	if(is3dsx){
@@ -162,9 +141,8 @@ void gfx_waitmessage(char* msg, ...){
 			break;
 
 		sf2d_start_frame(GFX_TOP, GFX_LEFT);
-			ui_frame();
+			ui_frame("Press the A key to continue.");
 			sftd_draw_textf_wrap(font, 0, fontheight*2, COLOR_WHITE, fontheight, 290, "%s", buffer);
-			sftd_draw_text(font, 0, fontheight*4, COLOR_WHITE, fontheight, "Press the A key to continue.");
 		sf2d_end_frame();
 		if(is3dsx){
 			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);

@@ -8,6 +8,8 @@ void init_save_folder();
 void load_tm_config(char** current);
 
 void town_opts(char* dirname);
+void clone_town(char* dirname);
+void rename_town(char* dirname);
 void delete_town(char* dirname);
 
 #endif

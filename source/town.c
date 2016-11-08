@@ -182,7 +182,7 @@ void load_tm_config(char** current){
 
 void town_opts(char* dirname){
 	int menuindex = 0;
-	int menucount = 2;
+	int menucount = 4;
 	char* current_town;
 	int ret;
 
@@ -190,6 +190,8 @@ void town_opts(char* dirname){
 
 	char* menu_entries[] = {
 		"Launch town",
+		"Clone town",
+		"Rename town",
 		"Delete town"
 	};
 
@@ -216,10 +218,72 @@ void town_opts(char* dirname){
 				svcSleepThread(2*SECOND_IN_NS); //so that the last message gets displayed and stays there as the game launches
 				break;
 			case 1:
+				clone_town(dirname);
+				return;
+			case 2:
+				rename_town(dirname);
+				return;
+			case 3:
 				delete_town(dirname);
 				return;
 		}
 	}
+}
+
+void clone_town(char* dirname){
+	char* savespath = "/TownManager/Saves/";
+	char* newtown;
+	char newpath[strlen(savespath)+64+1+1]; //2 = '/' + '\0'
+	char oldpath[strlen(savespath)+strlen(dirname)+1+1]; //2 = '/' + '\0'
+	char* oldfilepath;
+	char* buf;
+	file_t files;
+	u64 size;
+	int i;
+
+	newtown = get_string("Enter a name for the cloned town");
+	if(strcmp(newtown, "") == 0){
+		gfx_waitmessage("Nothing entered. Town not cloned");
+		return;
+	}
+	sprintf(newpath, "%s%s/", savespath, newtown);
+	FSUSER_CreateDirectory(sdmc_arch, fsMakePath(PATH_ASCII, newpath), 0);
+
+	memset(oldpath, '\0', sizeof(oldpath));
+	sprintf(oldpath, "%s%s/", savespath, dirname);
+	files = get_files(sdmc_arch, oldpath);
+
+	for(i = 0; i < files.numfiles; i++){
+		oldfilepath = calloc(strlen(oldpath)+strlen(files.files[i])+1, 1);
+		sprintf(oldfilepath, "%s%s", oldpath, files.files[i]);
+		buf = file_to_buffer(sdmc_arch, oldpath, files.files[i]);
+		size = filesize_to_u64(sdmc_arch, oldfilepath);
+		gfx_displaymessage("Copying %s to %s...", files.files[i], newtown);
+		buffer_to_file(sdmc_arch, buf, size, newpath, files.files[i]);
+		free(oldfilepath);
+		free(buf);
+	}
+	gfx_waitmessage("Done cloning town!");
+}
+
+void rename_town(char* dirname){
+	Result ret;
+	char* savespath = "/TownManager/Saves/";
+	char* newname;
+	char oldpath[strlen(savespath)+strlen(dirname)+1];
+	char newpath[strlen(savespath)+64+1];
+
+	newname = get_string("Enter the new name of the town");
+	memset(oldpath, '\0', sizeof(oldpath));
+	sprintf(oldpath, "%s%s", savespath, dirname);
+	memset(newpath, '\0', sizeof(newpath));
+	sprintf(newpath, "%s%s", savespath, newname);
+	gfx_displaymessage("Renaming town...");
+	if((ret = FSUSER_RenameDirectory(sdmc_arch, fsMakePath(PATH_ASCII, oldpath), sdmc_arch, fsMakePath(PATH_ASCII, newpath)))){
+		gfx_error(ret, __FILENAME__, __LINE__);
+		return;
+	}
+	gfx_waitmessage("Done renaming town!");
 }
 
 void delete_town(char* dirname){
@@ -271,7 +335,7 @@ void delete_town(char* dirname){
 
 	//Delete town folder
 	dirpath = calloc(strlen(savespath)+strlen(dirname)+1, 1);
-	sprintf(dirpath, "/TownManager/Saves/%s", dirname);
+	sprintf(dirpath, "%s%s", savespath, dirname);
 	gfx_displaymessage("Deleting town...");
 	ret = FSUSER_DeleteDirectoryRecursively(sdmc_arch, fsMakePath(PATH_ASCII, dirpath));
 	if(ret){

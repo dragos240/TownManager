@@ -22,7 +22,6 @@ extern const int COLOR_BLACK;
 void gfx_init();
 void gfx_fini();
 
-void gfx_waitbutton();
 int gfx_prompt(char* message, char* keymsg);
 int gfx_prompt3(char* message, char* keymsg);
 void gfx_error(Result ret, char* file, int line);

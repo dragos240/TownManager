@@ -172,6 +172,7 @@ void backup_to_prev_folder(char* dirname){
 		for(i = 0; i < files.numfiles; i++){
 			filepath = calloc(strlen(savespath)+strlen(dirname)+1+strlen(files.files[i])+1, 1);
 			sprintf(filepath, "%s%s/%s", savespath, dirname, files.files[i]);
+			gfx_displaymessage("Deleting %s from SD card...", files.files[i]);
 			ret = FSUSER_DeleteFile(sdmc_arch, fsMakePath(PATH_ASCII, filepath));
 			if(ret){
 				gfx_error(ret, __FILENAME__, __LINE__);

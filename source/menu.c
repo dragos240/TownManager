@@ -24,9 +24,7 @@ void display_menu(char **menu_entries, int total_entries, int *menupos, char *he
 		kDown = hidKeysDown();
 	
 		sf2d_start_frame(GFX_TOP, GFX_LEFT);
-			ui_frame();
-			sftd_draw_textf(font_bold, 1, 1, COLOR_BLACK, fontheight, "%s", headerstr);
-			sftd_draw_textf(font_bold, 0, 0, COLOR_WHITE, fontheight, "%s", headerstr);
+			ui_frame(headerstr);
 
 			j = 0;
 			//if more total_entries than max rows
