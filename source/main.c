@@ -14,7 +14,7 @@
 #include "launcher.h"
 
 int debug = 0;
-const char* tmver = "1.2.0";
+const char* tmver = "1.2.1";
 
 int main(){
 	Result ret;

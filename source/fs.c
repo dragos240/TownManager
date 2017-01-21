@@ -89,55 +89,116 @@ int load_config(char** current_town){
 	u32 written; //bytes written
 	char* buf;
 	conftok_t token;
+	file_t files;
 	const char* configpath = "/TownManager/config";
+	int i;
+	bool tm_conf_exists = false;
 
 	//if config file was just created now
 	if((ret = FSUSER_CreateFile(sdmc_arch, fsMakePath(PATH_ASCII, configpath), 0, 0)) == 0){
-		//open template config file
-		if(!(f = fopen("romfs:/config", "r"))){
-			gfx_waitmessage("Could not open template config file.");
-			return -1;
+		//look for existence of tm.conf (the old config file)
+		files = get_files(sdmc_arch, "/TownManager/");
+		for(i = 0; i < files.numfiles; i++){
+			if(strcmp(files.files[i], "tm.conf") == 0){
+				tm_conf_exists = true;
+				if((ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/tm.conf"), FS_OPEN_READ, 0))){
+					gfx_error(ret, __FILENAME__, __LINE__);
+					return -1;
+				}
+				if((ret = FSFILE_GetSize(handle, &size))){
+					gfx_error(ret, __FILENAME__, __LINE__);
+					return -1;
+				}
+				buf = malloc(size);
+				if((ret = FSFILE_Read(handle, &read, 0, buf, (u32)size))){
+					gfx_error(ret, __FILENAME__, __LINE__);
+					return -1;
+				}
+				token.townname = calloc((int)size, 1);
+				//using strncpy because buf will be freed soon
+				strncpy(token.townname, buf, size);
+				free(buf);
+				//get mediatype...
+				get_mediatype();
+				//and then assign its value to token.mediatype_val
+				token.mediatype_val = mediatype;
+				size = 1+size+1; //no need for another +1 because size includes '\0' already
+				buf = calloc(size, 1);
+				conf_gen(&buf, &token);
+				if((ret = FSFILE_Close(handle))){
+					gfx_error(ret, __FILENAME__, __LINE__);
+					return -1;
+				}
+			}
 		}
-		fseek(f, 0L, SEEK_END);
-		tempsize = ftell(f);
-		rewind(f);
-		if((buf = malloc(tempsize)) == NULL){
-			gfx_waitmessage("malloc failed! %s:%d", __FILENAME__, __LINE__);
-			return -1;
-		}
-		fread(buf, tempsize, 1, f);
-		fclose(f);
-
 		//open the newly created config file
 		if((ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, configpath), FS_OPEN_READ | FS_OPEN_WRITE, 0))){
 			gfx_error(ret, __FILENAME__, __LINE__);
 			return -1;
 		}
-		conf_parse(buf, &token);
-		get_mediatype();
-		token.mediatype_val = mediatype;
-		free(buf);
-		buf = calloc(2+strlen(token.townname)+1+1, 1);
-		conf_gen(&buf, &token);
-		size = strlen(buf);
-		if((ret = FSFILE_Write(handle, &written, 0, buf, size, FS_WRITE_FLUSH | FS_WRITE_UPDATE_TIME))){
-			gfx_error(ret, __FILENAME__, __LINE__);
-			return -1;
+		if(tm_conf_exists == false){
+			//open template config file
+			if(!(f = fopen("romfs:/config", "r"))){
+				gfx_waitmessage("Could not open template config file.");
+				return -1;
+			}
+			fseek(f, 0L, SEEK_END);
+			tempsize = ftell(f);
+			rewind(f);
+			if((buf = malloc(tempsize)) == NULL){
+				gfx_waitmessage("malloc failed! %s:%d", __FILENAME__, __LINE__);
+				return -1;
+			}
+			fread(buf, tempsize, 1, f);
+			fclose(f);
+
+			conf_parse(buf, &token);
+			get_mediatype();
+			token.mediatype_val = mediatype;
+			free(buf);
+			buf = calloc(2+strlen(token.townname)+1+1, 1);
+			conf_gen(&buf, &token);
+			size = strlen(buf);
+			if((ret = FSFILE_Write(handle, &written, 0, buf, size, FS_WRITE_FLUSH | FS_WRITE_UPDATE_TIME))){
+				gfx_error(ret, __FILENAME__, __LINE__);
+				return -1;
+			}
+			if(size != written){
+				gfx_waitmessage("size != written! %s:%d", __FILENAME__, __LINE__);
+				return -1;
+			}
+			if((ret = FSFILE_SetSize(handle, size))){
+				gfx_error(ret, __FILENAME__, __LINE__);
+				return -1;
+			}
+			if((ret = FSFILE_Close(handle))){
+				gfx_error(ret, __FILENAME__, __LINE__);
+				return -1;
+			}
+			*current_town = "Main";
+			return 0;
 		}
-		if(size != written){
-			gfx_waitmessage("size != written! %s:%d", __FILENAME__, __LINE__);
-			return -1;
+		//else if tm.conf exists...
+		else{
+			if((ret = FSFILE_Write(handle, &written, 0, buf, size, FS_WRITE_FLUSH | FS_WRITE_UPDATE_TIME))){
+				gfx_error(ret, __FILENAME__, __LINE__);
+				return -1;
+			}
+			if(size != written){
+				gfx_waitmessage("size != written! %s:%d", __FILENAME__, __LINE__);
+				return -1;
+			}
+			if((ret = FSFILE_SetSize(handle, size))){
+				gfx_error(ret, __FILENAME__, __LINE__);
+				return -1;
+			}
+			if((ret = FSFILE_Close(handle))){
+				gfx_error(ret, __FILENAME__, __LINE__);
+				return -1;
+			}
+			*current_town = token.townname;
+			return 0;
 		}
-		if((ret = FSFILE_SetSize(handle, size))){
-			gfx_error(ret, __FILENAME__, __LINE__);
-			return -1;
-		}
-		if((ret = FSFILE_Close(handle))){
-			gfx_error(ret, __FILENAME__, __LINE__);
-			return -1;
-		}
-		*current_town = "Main";
-		return 0;
 	}
 	//if config file exists
 	else{
