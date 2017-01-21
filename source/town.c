@@ -11,6 +11,7 @@
 #include "backup.h"
 #include "kb.h"
 #include "launcher.h"
+#include "conf.h"
 #include "town.h"
 
 void populate_menu_entries(char*** menu_entries, int* menucount){
@@ -20,23 +21,28 @@ void populate_menu_entries(char*** menu_entries, int* menucount){
 
 	dirs = get_dirs("/TownManager/Saves/");
 
-	*menucount = dirs.numdirs+1;
-	*menu_entries = malloc((dirs.numdirs+1)*sizeof(char*));
+	*menucount = dirs.numdirs+2; //"New" and "Change media source"
+	*menu_entries = malloc((dirs.numdirs+2)*sizeof(char*));
 	for(i = 0; i < dirs.numdirs; i++){
 		(*menu_entries)[i] = dirs.dirs[i];
 	}
-	(*menu_entries)[dirs.numdirs] = "New";
+	(*menu_entries)[dirs.numdirs] = "-New town-";
+	(*menu_entries)[dirs.numdirs+1] = "-Change media source-";
 }
 
 void create_town(){
 	Result ret;
 	Handle handle;
+	u32 read;
 	u32 written;
+	u32 size;
 	char* townname;
 	char* savesdir = "/TownManager/Saves/";
 	char* towndir;
 	char* filepath;
+	char* buf;
 	file_t files;
+	conftok_t token;
 	int i;
 
 	townname = get_string("Enter a town name");
@@ -52,18 +58,28 @@ void create_town(){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		return;
 	}
-	//Write townname as the sole contents of the /TownManager/tm.conf file
-	ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/tm.conf"), FS_OPEN_WRITE, 0);
+	//Change town in config file
+	ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/config"), FS_OPEN_WRITE, 0);
 	if(ret){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		return;
 	}
-	ret = FSFILE_Write(handle, &written, 0, townname, strlen(townname)+1, FS_WRITE_FLUSH | FS_WRITE_UPDATE_TIME);
+
+	size = 2+strlen(townname)+1+1;
+	buf = calloc(size, 1); //see conf.c for info on what this means
+	if((ret = FSFILE_Read(handle, &read, 0, buf, size))){
+		gfx_error(ret, __FILENAME__, __LINE__);
+		return;
+	}
+	conf_parse(buf, &token);
+	token.townname = townname;
+	conf_gen(&buf, &token);
+	ret = FSFILE_Write(handle, &written, 0, buf, strlen(buf)+1, FS_WRITE_FLUSH | FS_WRITE_UPDATE_TIME);
 	if(ret){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		return;
 	}
-	ret = FSFILE_SetSize(handle, (u64)(strlen(townname)+1));
+	ret = FSFILE_SetSize(handle, (u64)(strlen(buf)+1));
 	if(ret){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		return;
@@ -105,7 +121,7 @@ void init_save_folder(){
 	char* filepath;
 	u64 size;
 	int i;
-
+	
 	gfx_waitmessage("No save folders detected! Importing current saves as 'Main'.");
 	ret = FSUSER_CreateDirectory(sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/Saves/Main"), 0);
 	if(ret){
@@ -140,7 +156,7 @@ void load_tm_config(char** current){
 	int i;
 	int eol = 0;
 	char* buf2;
-
+	
 	FSUSER_CreateDirectory(sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager"), 0);
 	ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/tm.conf"), FS_OPEN_READ | FS_OPEN_CREATE, 0);
 	if(ret){
@@ -166,7 +182,7 @@ void load_tm_config(char** current){
 		gfx_waitmessage("Bytes read does not match size! (load_tm_config())");
 		return;
 	}
-
+	
 	for(i = 0; i < (int)read; i++){
 		if(buf[i] == '\n'){
 			break;
@@ -183,7 +199,6 @@ void load_tm_config(char** current){
 void town_opts(char* dirname){
 	int menuindex = 0;
 	int menucount = 4;
-	char* current_town;
 	int ret;
 
 	char headerstr[] = "Town options";
@@ -194,9 +209,7 @@ void town_opts(char* dirname){
 		"Rename town",
 		"Delete town"
 	};
-
-	load_tm_config(&current_town);
-
+	
 	while(aptMainLoop()){
 		display_menu(menu_entries, menucount, &menuindex, headerstr);
 
@@ -207,27 +220,27 @@ void town_opts(char* dirname){
 			case 0:
 				//code to load game files and inject them into game
 				ret = prepare_to_launch(dirname);
-				if(ret == -1){
-					gfx_waitmessage("Game failed to launch :(");
+					if(ret == -1){
+						gfx_waitmessage("Game failed to launch :(");
+						break;
+					}
+					if(is3dsx){
+						gfx_displaymessage("Launching game... (this may take ~10 seconds)");
+					}
+					launch_game();
+					svcSleepThread(2*SECOND_IN_NS); //so that the last message gets displayed and stays there as the game launches
 					break;
-				}
-				if(is3dsx){
-					gfx_displaymessage("Launching game... (this may take ~10 seconds)");
-				}
-				launch_game();
-				svcSleepThread(2*SECOND_IN_NS); //so that the last message gets displayed and stays there as the game launches
-				break;
-			case 1:
-				clone_town(dirname);
-				return;
-			case 2:
-				rename_town(dirname);
-				return;
-			case 3:
-				delete_town(dirname);
-				return;
+				case 1:
+					clone_town(dirname);
+					return;
+				case 2:
+					rename_town(dirname);
+					return;
+				case 3:
+					delete_town(dirname);
+					return;
+			}
 		}
-	}
 }
 
 void clone_town(char* dirname){
@@ -242,7 +255,7 @@ void clone_town(char* dirname){
 	int i;
 
 	newtown = get_string("Enter a name for the cloned town");
-	if(strcmp(newtown, "") == 0){
+	if(newtown == NULL){
 		gfx_waitmessage("Nothing entered. Town not cloned");
 		return;
 	}
@@ -269,11 +282,14 @@ void clone_town(char* dirname){
 void rename_town(char* dirname){
 	Result ret;
 	char* savespath = "/TownManager/Saves/";
-	char* newname;
+	char* newname = NULL;
 	char oldpath[strlen(savespath)+strlen(dirname)+1];
 	char newpath[strlen(savespath)+64+1];
 
 	newname = get_string("Enter the new name of the town");
+	if(newname == NULL){
+		return;
+	}
 	memset(oldpath, '\0', sizeof(oldpath));
 	sprintf(oldpath, "%s%s", savespath, dirname);
 	memset(newpath, '\0', sizeof(newpath));
@@ -291,13 +307,15 @@ void delete_town(char* dirname){
 	Handle handle;
 	int error = 0;
 	u32 read;
+	u32 written;
 	u64 size;
 	char* savespath = "/TownManager/Saves/";
 	char* dirpath;
-	char* lasttown;
+	char* buf;
+	conftok_t token;
 	
-	//check if town in tm.conf is the same as the selected town
-	ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/tm.conf"), FS_OPEN_READ, 0);
+	//check if town in config is the same as the selected town
+	ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/config"), FS_OPEN_READ, 0);
 	if(ret){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		error = 1;
@@ -309,36 +327,37 @@ void delete_town(char* dirname){
 		error = 1;
 		goto delete_town_cleanup;
 	}
-	lasttown = calloc(size+1, 1);
-	ret = FSFILE_Read(handle, &read, 0, lasttown, (u32)size);
+	buf = calloc(size+1, 1);
+	ret = FSFILE_Read(handle, &read, 0, buf, (u32)size);
 	if(ret){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		error = 1;
 		goto delete_town_cleanup;
 	}
-	FSFILE_Close(handle);
-	//if same, delete tm.conf
+	conf_parse(buf, &token);
+
+	//if Main, don't delete
 	if(strcmp(dirname, "Main") == 0){
 		gfx_waitmessage("'Main' cannot be deleted as it is the default save file.");
 		error = 1;
 		goto delete_town_cleanup;
 	}
-	if(strcmp(dirname, lasttown) == 0){
-		gfx_displaymessage("Deleting tm.conf...");
-		ret = FSUSER_DeleteFile(sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/tm.conf"));
-		if(ret){
-			gfx_error(ret, __FILENAME__, __LINE__);
-			error = 1;
-		}
+	if(strcmp(dirname, token.townname) == 0){
+		//changes default town back to Main
+		token.townname = "Main";
+		size = 2+strlen(token.townname)+1+1;
+		conf_gen(&buf, &token);
+		FSFILE_Write(handle, &written, 0, buf, size, FS_WRITE_FLUSH | FS_WRITE_UPDATE_TIME);
+		FSFILE_SetSize(handle, (u64)size);
 	}
-	free(lasttown);
+	free(buf);
+	FSFILE_Close(handle);
 
 	//Delete town folder
 	dirpath = calloc(strlen(savespath)+strlen(dirname)+1, 1);
 	sprintf(dirpath, "%s%s", savespath, dirname);
 	gfx_displaymessage("Deleting town...");
-	ret = FSUSER_DeleteDirectoryRecursively(sdmc_arch, fsMakePath(PATH_ASCII, dirpath));
-	if(ret){
+	if((ret = FSUSER_DeleteDirectoryRecursively(sdmc_arch, fsMakePath(PATH_ASCII, dirpath)))){
 		gfx_waitmessage("dirpath: %s", dirpath);
 		gfx_error(ret, __FILENAME__, __LINE__);
 		error = 1;

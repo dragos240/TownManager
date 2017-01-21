@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <3ds.h>
 
@@ -13,10 +14,11 @@
 #include "launcher.h"
 
 int debug = 0;
+const char* tmver = "1.2.0";
 
 int main(){
 	Result ret;
-	char* current_town;
+	char* current_town = NULL;
 	if(debug == 1){
 		run_tests();
 		return 0;
@@ -27,30 +29,45 @@ int main(){
 	int menuindex = 0;
 	int menucount;
 
-	char headerstr[] = "TownManager";
+	char* headerstr;
+	headerstr = calloc(strlen("TownManager - v")+10+1, 1); //give 10 chars for ver string
+	sprintf(headerstr, "TownManager - v%s", tmver);
 
 	char** menu_entries = NULL;
 
 	gfx_init();
 	if(is3dsx){
-		ret = fs_init();
-		if(ret){
+		if((ret = fs_init())){
 			gfx_error(ret, __FILENAME__, __LINE__);
 			goto main_cleanup;
 		}
 	}
-	get_mediatype();
-	if(get_titleid() == -1)
+	//open sdmc archive
+	if((ret = open_sdmc_archive())){
+		gfx_error(ret, __FILENAME__, __LINE__);
 		goto main_cleanup;
+	}
+	//create sdmc:/TownManager if it does not already exist
+	FSUSER_CreateDirectory(sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager"), 0);
+	//load configuration file
+	if(load_config(&current_town) < 0){
+		gfx_waitmessage("load_config failed");
+		goto main_cleanup;
+	}
+	//get titleid (titleid varies depending on region)
+	if(get_titleid() == -1){
+		gfx_waitmessage("get_titleid failed");
+		goto main_cleanup;
+	}
+	//initialize launcher
 	launcher_init();
-	ret = open_archives();
-	if(ret){
+	//open game archive
+	if((ret = open_game_archive())){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		goto main_cleanup;
 	}
 
-	load_tm_config(&current_town);
-	if(strcmp(current_town, "") != 0){
+	if(current_town != NULL){
 		backup_to_prev_folder(current_town);
 	}
 
@@ -59,11 +76,14 @@ int main(){
 
 		display_menu(menu_entries, menucount, &menuindex, headerstr);
 
-		if(menuindex != menucount-1 && menuindex != -1){
+		if(menuindex < menucount-2 && menuindex != -1){
 			town_opts(menu_entries[menuindex]);
 		}
-		else if(menucount != 1 && menuindex != -1){
+		else if(menuindex == menucount-2){
 			create_town();
+		}
+		else if(menuindex == menucount-1){
+			change_mediatype();
 		}
 	}
 main_cleanup:

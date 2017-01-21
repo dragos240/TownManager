@@ -1,11 +1,14 @@
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include <3ds.h>
 
 #include "common.h"
 #include "gfx.h"
 #include "menu.h"
+#include "conf.h"
 #include "fs.h"
 
 FS_MediaType mediatype;
@@ -29,16 +32,21 @@ Result fs_init(){
 	return ret;
 }
 
-Result open_archives(){
+Result open_sdmc_archive(){
 	Result ret;
-	u32* path;
-	FS_Path null_binpath, game_binpath;
 
 	//open sdmc card
-	null_binpath = (FS_Path){PATH_EMPTY, 1, (u8*)""};
-	ret = FSUSER_OpenArchive(&sdmc_arch, ARCHIVE_SDMC, null_binpath);
+	ret = FSUSER_OpenArchive(&sdmc_arch, ARCHIVE_SDMC, fsMakePath(PATH_EMPTY, ""));
 	if(ret)
 		return ret;
+
+	return ret;
+}
+
+Result open_game_archive(){
+	Result ret;
+	u32* path;
+	FS_Path game_binpath;
 
 	if(is3dsx){
 		ret = FSUSER_OpenArchive(&game_arch, ARCHIVE_SAVEDATA, fsMakePath(PATH_EMPTY, ""));
@@ -70,6 +78,97 @@ void fs_fini(){
 	fsExit();
 }
 
+int load_config(char** current_town){
+	//loads config file and sets *current_town
+	Result ret;
+	Handle handle;
+	FILE* f;
+	u64 size;
+	int tempsize;
+	u32 read; //bytes read
+	u32 written; //bytes written
+	char* buf;
+	conftok_t token;
+	const char* configpath = "/TownManager/config";
+
+	//if config file was just created now
+	if((ret = FSUSER_CreateFile(sdmc_arch, fsMakePath(PATH_ASCII, configpath), 0, 0)) == 0){
+		//open template config file
+		if(!(f = fopen("romfs:/config", "r"))){
+			gfx_waitmessage("Could not open template config file.");
+			return -1;
+		}
+		fseek(f, 0L, SEEK_END);
+		tempsize = ftell(f);
+		rewind(f);
+		if((buf = malloc(tempsize)) == NULL){
+			gfx_waitmessage("malloc failed! %s:%d", __FILENAME__, __LINE__);
+			return -1;
+		}
+		fread(buf, tempsize, 1, f);
+		fclose(f);
+
+		//open the newly created config file
+		if((ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, configpath), FS_OPEN_READ | FS_OPEN_WRITE, 0))){
+			gfx_error(ret, __FILENAME__, __LINE__);
+			return -1;
+		}
+		conf_parse(buf, &token);
+		get_mediatype();
+		token.mediatype_val = mediatype;
+		free(buf);
+		buf = calloc(2+strlen(token.townname)+1+1, 1);
+		conf_gen(&buf, &token);
+		size = strlen(buf);
+		if((ret = FSFILE_Write(handle, &written, 0, buf, size, FS_WRITE_FLUSH | FS_WRITE_UPDATE_TIME))){
+			gfx_error(ret, __FILENAME__, __LINE__);
+			return -1;
+		}
+		if(size != written){
+			gfx_waitmessage("size != written! %s:%d", __FILENAME__, __LINE__);
+			return -1;
+		}
+		if((ret = FSFILE_SetSize(handle, size))){
+			gfx_error(ret, __FILENAME__, __LINE__);
+			return -1;
+		}
+		if((ret = FSFILE_Close(handle))){
+			gfx_error(ret, __FILENAME__, __LINE__);
+			return -1;
+		}
+		*current_town = "Main";
+		return 0;
+	}
+	//if config file exists
+	else{
+		if((ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, configpath), FS_OPEN_READ, 0))){
+			gfx_error(ret, __FILENAME__, __LINE__);
+			return -1;
+		}
+		if((ret = FSFILE_GetSize(handle, &size))){
+			gfx_error(ret, __FILENAME__, __LINE__);
+			return -1;
+		}
+		if((buf = malloc(size)) == NULL){
+			gfx_waitmessage("malloc failed! %s:%d", __FILENAME__, __LINE__);
+			return -1;
+		}
+		if((ret = FSFILE_Read(handle, &read, 0, buf, size))){
+			gfx_error(ret, __FILENAME__, __LINE__);
+			return -1;
+		}
+		if((ret = FSFILE_Close(handle))){
+			gfx_error(ret, __FILENAME__, __LINE__);
+			return -1;
+		}
+		conf_parse(buf, &token);
+		mediatype = token.mediatype_val;
+		*current_town = token.townname;
+	}
+
+	return 0;
+}
+
 dir_t get_dirs(char* path){
 	Result ret;
 	Handle handle;
@@ -93,6 +192,7 @@ dir_t get_dirs(char* path){
 		dirs.dirs[dirs.numdirs-1] = u16str2str(get_ent.name);
 	}
 	while(read > 0);
+	FSDIR_Close(handle);
 
 	return dirs;
 }
@@ -121,6 +221,7 @@ file_t get_files(FS_Archive arch, char* path){
 		files.files[files.numfiles-1] = u16str2str(get_ent.name);
 	}
 	while(read > 0);
+	FSDIR_Close(handle);
 
 	return files;
 }
@@ -143,6 +244,44 @@ void get_mediatype(){
 		display_menu(menu_entries, menucount, &menuindex, headerstr);
 		mediatype = menuindex+1;
 	}
+}
+
+void change_mediatype(){
+	Result ret;
+	Handle handle;
+	u32 read;
+	u32 written;
+	u32 size;
+	char* buf;
+	conftok_t token;
+
+	get_mediatype();
+	if((ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/config"), FS_OPEN_READ | FS_OPEN_WRITE, 0))){
+		gfx_error(ret, __FILENAME__, __LINE__);
+		return;
+	}
+	if((ret = FSFILE_GetSize(handle, (u64*)&size))){
+		gfx_error(ret, __FILENAME__, __LINE__);
+		return;
+	}
+	buf = malloc(size);
+	if((ret = FSFILE_Read(handle, &read, 0, buf, size))){
+		gfx_error(ret, __FILENAME__, __LINE__);
+		return;
+	}
+	conf_parse(buf, &token);
+	token.mediatype_val = mediatype;
+	conf_gen(&buf, &token);
+	if((ret = FSFILE_Write(handle, &written, 0, buf, size, FS_WRITE_FLUSH | FS_WRITE_UPDATE_TIME))){
+		gfx_error(ret, __FILENAME__, __LINE__);
+		return;
+	}
+	if((ret = FSFILE_Close(handle))){
+		gfx_error(ret, __FILENAME__, __LINE__);
+		return;
+	}
+	
+	gfx_waitmessage("Changed media source.");
 }
 
 int get_titleid(){

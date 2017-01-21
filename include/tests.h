@@ -3,6 +3,7 @@
 
 void run_tests();
 
+void conf_parse_test();
 void text_test();
 void simple_gfx_test();
 void gfx_test();

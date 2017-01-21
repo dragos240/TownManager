@@ -176,6 +176,7 @@ void backup_to_prev_folder(char* dirname){
 			ret = FSUSER_DeleteFile(sdmc_arch, fsMakePath(PATH_ASCII, filepath));
 			if(ret){
 				gfx_error(ret, __FILENAME__, __LINE__);
+				gfx_waitmessage("dirname: %s", dirname);
 				return;
 			}
 			free(filepath);

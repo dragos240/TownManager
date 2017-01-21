@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include <3ds.h>
 
@@ -12,6 +13,9 @@ char* get_string(char* hint){
 	swkbdSetHintText(&key_state, hint);
 
 	swkbdInputText(&key_state, input, 64);
+	if(strcmp(input, "") == 0){
+		return NULL;
+	}
 
 	return input;
 }

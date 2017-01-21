@@ -8,6 +8,7 @@
 #include "fs.h"
 #include "gfx.h"
 #include "backup.h"
+#include "conf.h"
 #include "launcher.h"
 
 static Handle nssHandle = 0;
@@ -29,8 +30,10 @@ int prepare_to_launch(char* dirname){
 	char* townpath;
 	char* filepath;
 	char* buf;
-	u32 written;
 	u64 size;
+	u32 read;
+	u32 written;
+	conftok_t token;
 	file_t sdmc_files, game_files;
 	int i;
 	int error;
@@ -86,16 +89,32 @@ int prepare_to_launch(char* dirname){
 	if(is3dsx)
 		fs_init();
 	free(townpath);
-	//Write dirname as the sole contents of the /TownManager/tm.conf file
-	if((ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/tm.conf"), FS_OPEN_WRITE, 0))){
+	if((ret = FSUSER_OpenFile(&handle, sdmc_arch, fsMakePath(PATH_ASCII, "/TownManager/config"), FS_OPEN_READ | FS_OPEN_WRITE, 0))){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		return -1;
 	}
-	if((ret = FSFILE_Write(handle, &written, 0, dirname, strlen(dirname)+1, FS_WRITE_FLUSH | FS_WRITE_UPDATE_TIME))){
+	if((ret = FSFILE_GetSize(handle, &size))){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		return -1;
 	}
-	if((ret = FSFILE_SetSize(handle, (u64)(strlen(dirname)+1)))){
+	if((buf = malloc(size)) == NULL){
+		gfx_waitmessage("%s:%d malloc failed!", __FILENAME__, __LINE__);
+		return -1;
+	}
+	if((ret = FSFILE_Read(handle, &read, 0, buf, size))){
+		gfx_error(ret, __FILENAME__, __LINE__);
+		return -1;
+	}
+	conf_parse(buf, &token);
+	token.townname = dirname;
+	free(buf);
+	buf = calloc(2+strlen(token.townname)+1+1, 1); //1 = '\0'
+	conf_gen(&buf, &token);
+	if((ret = FSFILE_SetSize(handle, strlen(buf)))){
+		gfx_error(ret, __FILENAME__, __LINE__);
+		return -1;
+	}
+	if((ret = FSFILE_Write(handle, &written, 0, buf, strlen(buf), FS_WRITE_FLUSH | FS_WRITE_UPDATE_TIME))){
 		gfx_error(ret, __FILENAME__, __LINE__);
 		return -1;
 	}
