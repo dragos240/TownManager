@@ -372,10 +372,16 @@ int get_titleid(){
 		for(i = 0; i < (signed)num_sdtitles && titleid == 1337LL; i++){
 			if(sd_titles[i] == NA_GAMEID)
 				titleid = NA_GAMEID;
+			else if(sd_titles[i] == NA_WA_GAMEID)
+				titleid = NA_WA_GAMEID;
 			else if(sd_titles[i] == EU_GAMEID)
 				titleid = EU_GAMEID;
+			else if(sd_titles[i] == EU_WA_GAMEID)
+				titleid = EU_WA_GAMEID;
 			else if(sd_titles[i] == JP_GAMEID)
 				titleid = JP_GAMEID;
+			else if(sd_titles[i] == JP_WA_GAMEID)
+				titleid = JP_WA_GAMEID;
 			if(titleid != 1337LL){
 				gfx_displaymessage("Found!");
 			}
@@ -386,7 +392,9 @@ int get_titleid(){
 		}
 	}
 	amExit();
-	if(titleid != NA_GAMEID && titleid != EU_GAMEID && titleid != JP_GAMEID){
+	if(titleid != NA_GAMEID && titleid != NA_WA_GAMEID &&
+			titleid != EU_GAMEID && titleid != EU_WA_GAMEID &&
+			titleid != JP_GAMEID && titleid != JP_WA_GAMEID){
 		gfx_waitmessage("Unknown titleID 0x%llX", titleid);
 		return -1;
 	}
